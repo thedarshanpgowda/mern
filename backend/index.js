@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import cors from "cors";
+import pdf from "html-pdf";
 import { OfficerModel } from "./Model/Officer.js";
 import { UserModel } from "./Model/User.js";
 import { busModel } from "./Model/Bus.js";
@@ -48,20 +49,31 @@ const hashPassword = async (password) => {
 };
 
 // Create an officer
-app.post("/officer/post", validateForm, async (req, res) => {
+app.post("/officer/post", async (req, res) => {
   try {
+    // console.log("hashPassword");
     const id = uuidv4();
     const data = req.body;
-    const hashedPassword = await hashPassword(data.password);
-    const obj = await OfficerModel.create({
-      ...data,
-      password: hashedPassword,
-      officerID: id,
-    });
-    res.status(201).json(obj);
+    // console.log(data.data);
+    const hashedPassword = await hashPassword(data.data.password);
+    // console.log(data.data.email)
+    const objpresent = await OfficerModel.find({ email: data.data.email });
+    console.log(objpresent);
+    if (objpresent.length == 0) {
+      console.log("inside if clause 1");
+      const obj = await OfficerModel.create({
+        ...data.data,
+        password: hashedPassword,
+        officerID: id,
+      });
+      console.log("inside if clause 2");
+      res.status(201).json(obj);
+    } else {
+      res.status(500).json({ message: "user not found" });
+    }
   } catch (err) {
     console.error("Error creating officer:", err);
-    res.status(500).json({ message: "Error creating officer " + err });
+    res.json({ message: "Error creating officer " + err }).status(500);
   }
 });
 
@@ -84,7 +96,7 @@ app.delete("/officer/delete/:id", async (req, res) => {
 app.delete("/officer/delete", async (req, res) => {
   try {
     const obj = await OfficerModel.deleteMany();
-    res.json(obj);
+    res.send(obj);
   } catch (err) {
     console.error("Error deleting officers:", err);
     res.status(500).json({ message: "Error deleting officers" });
@@ -196,16 +208,21 @@ app.put("/user/put/:id", async (req, res) => {
 });
 
 // login route
-app.post("/login/", async (req, res) => {
-  const { email, password } = req.body;
+app.post("/login", async (req, res) => {
+  console.log("object");
+  const data = req.body;
+  const { email, password } = data.data;
+  var userdata = {};
+  console.log(email, password);
   try {
     const user = await OfficerModel.findOne({ email: email });
-    if (!user) {
+    console.log(user);
+    if (user === null) {
       return res.status(404).json({ message: "User not found" });
     }
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (passwordMatch) {
-      res.status(200).json({ message: "Login successful" });
+      res.status(200).json({ ...user, message: "Login successful" });
     } else {
       res.status(401).json({ message: "Incorrect Password" });
     }
@@ -289,13 +306,35 @@ app.post("/passanger/post", async (req, res) => {
     res.json(er).status(401);
   }
 });
+app.post("/generatepdf", (req, res) => {
+  console.log("ntered");
+  const { content, options } = req.body;
+
+  pdf.create(content, options).toBuffer((err, buffer) => {
+    if (err) {
+      console.error("Error generating PDF:", err);
+      res.status(500).send("Error generating PDF");
+    } else {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", "attachment; filename=invoice.pdf");
+      res.send(buffer);
+    }
+  });
+});
 
 app.delete("/passanger/delete", async (req, res) => {
   console.log("entered to bcknd");
   try {
     const data = req.body;
-    console.log(data)
-    const obj = await passangerModel.findOneAndDelete({ id: id, name: name });
+    const email = data.email;
+    const id = data.id;
+    console.log(email, " ", id);
+    const newobj = await passangerModel.find({ busId: id, email: email });
+    console.log(newobj);
+    const obj = await passangerModel.findOneAndDelete({
+      busId: id,
+      email: email,
+    });
     res.json(obj).status(200);
     console.log("updated");
   } catch (er) {
@@ -303,6 +342,20 @@ app.delete("/passanger/delete", async (req, res) => {
   }
 });
 
+app.post("/getPassanger", async (req, res) => {
+  try {
+    // console.log("bcknd")
+    const id = req.body.id;
+    // console.log(id)
+    const updatedUser = await passangerModel.find({ busId: id });
+    // console.log(updatedUser)
+    // res.json(updatedUser);
+    res.json(updatedUser);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error updating user" });
+  }
+});
 app.listen(3000, () => {
   console.log("started");
 });

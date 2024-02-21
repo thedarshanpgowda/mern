@@ -10,9 +10,9 @@ const newschema = mongoose.Schema({
     required: true,
   },
   email: {
+    unique: true,
     type: String,
     required: true,
-    unique: true,
   },
   password: {
     type: String,
@@ -23,7 +23,6 @@ const newschema = mongoose.Schema({
   },
   role: {
     type: String,
-    required: true,
     default : "Officer"
   },
 });
