@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const newschema = mongoose.Schema({
   officerID: {
     type: String,
-    required : true
+    required : true,
+    //primary key
   },
   name: {
     type: String,

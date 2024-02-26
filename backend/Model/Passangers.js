@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const newschema = mongoose.Schema({
   userID: String,
   busId: { type: String, required: true },
+  //primary key of busId references Passanger
   source: { type: String, required: true },
   destination: String,
   name: { type: String, required: true },

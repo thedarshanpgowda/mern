@@ -239,7 +239,7 @@ app.post("/bus/post", async (req, res) => {
     const data = req.body;
     const obj = await busModel.create({
       ...data,
-      busId: uuidv4(),
+      id: uuidv4(),
     });
     res.json(obj).status(200);
   } catch (er) {
